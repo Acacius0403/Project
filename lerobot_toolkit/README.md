@@ -180,35 +180,3 @@ python main.py web --dataset ../dataset_0423_v2.1
 # 5. View results
 # Open reports/dataset_report.md in any Markdown viewer
 ```
-
----
-
-## Project Summary
-
-### 1. What information does this LeRobot dataset contain?
-
-The dataset contains 30 episodes (8,369 total frames at 30 FPS) of an OLI dual-arm robot performing the task "pick up the white bag and put it in the yellow box." Each episode is recorded as a parquet file with 16-dimensional state and action vectors (7 joints + 1 claw per arm), timestamps, and frame indices. Four camera views (top01, top02, left_wrist, right_wrist) at 640×480 resolution provide visual data via MP4 videos. Normalization statistics are also provided.
-
-### 2. How are episodes organized?
-
-Each episode is one complete task execution attempt, stored in three synchronized formats: a parquet file under `data/chunk-000/` containing numerical state/action time series, four MP4 video files under `videos/chunk-000/` (one per camera), and a metadata entry in `meta/episodes.jsonl` recording the frame count. All paths follow a consistent naming template defined in `meta/info.json`. Episode lengths range from 222 to 354 frames (7.4–11.8 seconds).
-
-### 3. What do action and state represent?
-
-Both are 16-dimensional vectors representing the robot's joint configurations. State records the actual measured joint positions at each timestep; action records the commanded target joint positions. The 16 dimensions map to: left shoulder (pitch/roll/yaw), left elbow, left wrist (yaw/pitch/roll), left claw, right shoulder (pitch/roll/yaw), right elbow, right wrist (yaw/pitch/roll), right claw. Training a behavior-cloning policy would use state → action as input → target pairs.
-
-### 4. Are there any anomalies in the dataset?
-
-Based on the `check` command results: 6 episodes are flagged as too short (< 250 frames: episodes 13, 14, 16, 17, 23, 24) and 1 as too long (> 350 frames: episode 8). No NaN or Inf values were found. No all-zero action frames were detected. All 120 video files (30 episodes × 4 cameras) are present. All right-arm joint dimensions show very low variance — expected because the robot primarily uses its left arm to pick and place the bag, with the right arm remaining nearly stationary.
-
-### 5. What problem does your toolkit solve?
-
-It provides a self-contained, zero-dependency-on-LeRobot-offical-library solution for understanding, validating, and preparing a LeRobot dataset before training. Instead of requiring users to piece together ad-hoc pandas/cv2 scripts, it offers a unified CLI that covers the full data exploration workflow: overview → inspection → statistics → quality checks → consolidated report.
-
-### 6. What features would you add if continuing to improve?
-
-The initial bonus features (Gradio web UI, 4-camera synchronized replay, subset export) have already been implemented. Future improvements could include:
-- Action/state anomaly detection using statistical models (e.g., detecting outlier frames beyond N standard deviations).
-- Training data preparation: train/val splitting, state/action normalization, PyTorch Dataset wrapper generation.
-- Multi-dataset comparison (`compare` command) to diff two LeRobot datasets by episode counts, action distributions, and camera configurations.
-- Support for additional LeRobot dataset versions beyond v2.1.
