@@ -27,7 +27,7 @@ pip install -r requirements.txt
 Place the dataset folder so it is accessible from the project root:
 
 ```
-embodied已完成/
+embodied/
 ├── dataset_0423_v2.1/     ← the dataset
 │   ├── meta/
 │   ├── data/
