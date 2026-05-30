@@ -1,0 +1,9 @@
+numpy
+pandas
+pyarrow
+matplotlib
+opencv-python
+tqdm
+rich
+typer
+gradio

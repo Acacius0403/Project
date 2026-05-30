@@ -1,0 +1,5 @@
+dataset_0423_v2.1/
+*.mp4
+.venv/
+__pycache__/
+*.pyc

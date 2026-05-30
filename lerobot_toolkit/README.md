@@ -1,0 +1,214 @@
+# LeRobot Dataset Toolkit
+
+A Python CLI toolkit for inspecting, analyzing, validating, and exporting LeRobot v2.1 datasets. Built for course assignment "Embodied AI Homework 1".
+
+## 1. Project Overview
+
+This toolkit provides 8 command-line tools to work with the LeRobot robot-learning dataset (`dataset_0423_v2.1`). It reads parquet-structured robot state/action data and multi-camera videos, computes statistics, runs data-quality checks, generates analysis reports, offers a Gradio web visualization interface with multi-camera sync, and supports interactive 4-camera episode replay — all without calling the official LeRobot library.
+
+## 2. Installation
+
+```bash
+# Windows
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+# Linux / Mac
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Dependencies** (see `requirements.txt`): numpy, pandas, pyarrow, matplotlib, opencv-python, tqdm, rich, typer, gradio
+
+## 3. Dataset Setup
+
+Place the dataset folder so it is accessible from the project root:
+
+```
+embodied已完成/
+├── dataset_0423_v2.1/     ← the dataset
+│   ├── meta/
+│   ├── data/
+│   └── videos/
+└── lerobot_toolkit/       ← this project
+    ├── main.py
+    └── ...
+```
+
+## 4. Usage Examples
+
+All paths below assume you are running from the `lerobot_toolkit/` directory.
+
+### `info` — Dataset overview
+
+```bash
+python main.py info --dataset ../dataset_0423_v2.1
+python main.py info --dataset ../dataset_0423_v2.1 --json
+```
+
+Displays: LeRobot version, robot type, episode count, total frames, FPS, average episode length/duration, task list, state/action dimensions and joint names, camera list.
+
+### `list-episodes` — Episode summary table
+
+```bash
+python main.py list-episodes --dataset ../dataset_0423_v2.1
+```
+
+Lists all 30 episodes with frame count, duration, video completeness, and health status (OK / Too short / Too long / Missing video).
+
+### `stats` — Statistical analysis
+
+```bash
+python main.py stats --dataset ../dataset_0423_v2.1 --output reports/stats.json
+python main.py stats --dataset ../dataset_0423_v2.1 --output reports/stats.json --low-variance-threshold 0.0001
+```
+
+Computes per-dimension min/max/mean/std for state and action, detects NaN/Inf, all-zero action frames, and low-variance dimensions. Generates 3 charts:
+- `reports/figures/episode_length_hist.png` — episode length histogram
+- `reports/figures/action_range.png` — action per-dimension range chart
+- `reports/figures/action_change.png` — mean action change per dimension
+
+### `check` — Data quality validation
+
+```bash
+python main.py check --dataset ../dataset_0423_v2.1 --output reports/check_report.md
+python main.py check --dataset ../dataset_0423_v2.1 --min-frames 250 --max-frames 350 --max-action-jump 0.2
+```
+
+Runs 16 quality checks: meta file existence, episode index uniqueness, parquet/row/column validity, timestamp monotonicity and interval, frame_index continuity, episode_index correctness, state/action dimension consistency, NaN/Inf detection, all-zero action detection, action jump anomalies, episode length anomalies, task description validity, and video presence/frame-count matching.
+
+Generates `reports/check_report.md`.
+
+### `report` — Full analysis report
+
+```bash
+python main.py report --dataset ../dataset_0423_v2.1 --output reports/dataset_report.md
+```
+
+Generates a 9-section Markdown report consolidating info, stats, and check results. Requires `stats` and `check` commands to be run first.
+
+### `export` — Subset export (bonus)
+
+```bash
+python main.py export --dataset ../dataset_0423_v2.1 --episodes 0,1,2 --output exports/demo_small
+```
+
+Creates a standalone LeRobot dataset directory containing only the specified episodes with updated meta files, copied parquet files, and copied videos.
+
+### `replay` — 4-Camera synchronized playback (bonus)
+
+```bash
+python main.py replay --dataset ../dataset_0423_v2.1 --episode 0
+```
+
+Opens an OpenCV window with all 4 camera views displayed simultaneously in a 2×2 grid layout. Bottom panel shows frame number, timestamp, and the four joints with the largest state-action delta at each frame.
+
+Keyboard controls:
+- **SPACE** — play / pause auto-advance
+- **← → or A/D** — previous / next frame
+- **J** — jump to frame (enter frame number in terminal)
+- **Q / ESC** — quit
+
+### `web` — Gradio web visualization interface (bonus)
+
+```bash
+python main.py web --dataset ../dataset_0423_v2.1
+```
+
+Launches a Gradio web application in the browser with:
+- **Dataset loader** — enter path and view summary
+- **Episode browser** — dropdown with frame count and anomaly tags
+- **4-camera sync display** — 2×2 grid updated via frame slider
+- **State trajectory plot** — left-arm and right-arm curves with current-frame indicator
+- **Quality checks** — one-click run of all 16 checks with results table
+- **Report generation** — generate and download the full analysis report
+
+## 5. Output Files
+
+| File | Generated by | Description |
+|------|-------------|-------------|
+| `reports/stats.json` | `stats` | Per-dimension state/action statistics |
+| `reports/check_report.md` | `check` | 16-item quality check results |
+| `reports/dataset_report.md` | `report` | 9-section final analysis report |
+| `reports/figures/*.png` | `stats` | 3 statistical charts |
+| `exports/demo_small/` | `export` | Exported dataset subset |
+
+## 6. Implemented Features
+
+- [x] `info` — dataset metadata overview
+- [x] `list-episodes` — episode summary table with status labels
+- [x] `stats` — per-dimension statistics + 3 figures + JSON export
+- [x] `check` — 16 quality checks + Markdown report
+- [x] `report` — 9-section consolidated Markdown report
+- [x] `export` — subset export as standalone LeRobot dataset
+- [x] `replay` — 4-camera synchronized OpenCV video playback
+- [x] `web` — Gradio web UI with multi-camera sync, state curves, quality checks, report download
+
+## 7. Known Limitations
+
+- Designed for LeRobot v2.1 dataset format; may need adaptation for other versions.
+- Video frame-count matching uses OpenCV and can be slow for large datasets.
+- The `replay` command uses OpenCV GUI windows and requires a display environment (won't work on headless servers).
+- All episodes are assumed to reside in a single chunk (`chunk-000`); very large datasets spanning multiple chunks would require updates to `exporter.py`.
+- Right-arm joints show very low variance in this dataset (the robot primarily uses its left arm for the task), causing them to be flagged as low-variance dimensions.
+
+## 8. Reproducing the Report
+
+```bash
+# 1. Create and activate virtual environment
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/Mac
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run the core pipeline
+python main.py info --dataset ../dataset_0423_v2.1
+python main.py list-episodes --dataset ../dataset_0423_v2.1
+python main.py stats --dataset ../dataset_0423_v2.1 --output reports/stats.json
+python main.py check --dataset ../dataset_0423_v2.1 --output reports/check_report.md
+python main.py report --dataset ../dataset_0423_v2.1 --output reports/dataset_report.md
+
+# 4. Bonus: export subset, replay, or launch web UI
+python main.py export --dataset ../dataset_0423_v2.1 --episodes 0,1,2 --output exports/demo_small
+python main.py replay --dataset ../dataset_0423_v2.1 --episode 0
+python main.py web --dataset ../dataset_0423_v2.1
+
+# 5. View results
+# Open reports/dataset_report.md in any Markdown viewer
+```
+
+---
+
+## Project Summary
+
+### 1. What information does this LeRobot dataset contain?
+
+The dataset contains 30 episodes (8,369 total frames at 30 FPS) of an OLI dual-arm robot performing the task "pick up the white bag and put it in the yellow box." Each episode is recorded as a parquet file with 16-dimensional state and action vectors (7 joints + 1 claw per arm), timestamps, and frame indices. Four camera views (top01, top02, left_wrist, right_wrist) at 640×480 resolution provide visual data via MP4 videos. Normalization statistics are also provided.
+
+### 2. How are episodes organized?
+
+Each episode is one complete task execution attempt, stored in three synchronized formats: a parquet file under `data/chunk-000/` containing numerical state/action time series, four MP4 video files under `videos/chunk-000/` (one per camera), and a metadata entry in `meta/episodes.jsonl` recording the frame count. All paths follow a consistent naming template defined in `meta/info.json`. Episode lengths range from 222 to 354 frames (7.4–11.8 seconds).
+
+### 3. What do action and state represent?
+
+Both are 16-dimensional vectors representing the robot's joint configurations. State records the actual measured joint positions at each timestep; action records the commanded target joint positions. The 16 dimensions map to: left shoulder (pitch/roll/yaw), left elbow, left wrist (yaw/pitch/roll), left claw, right shoulder (pitch/roll/yaw), right elbow, right wrist (yaw/pitch/roll), right claw. Training a behavior-cloning policy would use state → action as input → target pairs.
+
+### 4. Are there any anomalies in the dataset?
+
+Based on the `check` command results: 6 episodes are flagged as too short (< 250 frames: episodes 13, 14, 16, 17, 23, 24) and 1 as too long (> 350 frames: episode 8). No NaN or Inf values were found. No all-zero action frames were detected. All 120 video files (30 episodes × 4 cameras) are present. All right-arm joint dimensions show very low variance — expected because the robot primarily uses its left arm to pick and place the bag, with the right arm remaining nearly stationary.
+
+### 5. What problem does your toolkit solve?
+
+It provides a self-contained, zero-dependency-on-LeRobot-offical-library solution for understanding, validating, and preparing a LeRobot dataset before training. Instead of requiring users to piece together ad-hoc pandas/cv2 scripts, it offers a unified CLI that covers the full data exploration workflow: overview → inspection → statistics → quality checks → consolidated report.
+
+### 6. What features would you add if continuing to improve?
+
+The initial bonus features (Gradio web UI, 4-camera synchronized replay, subset export) have already been implemented. Future improvements could include:
+- Action/state anomaly detection using statistical models (e.g., detecting outlier frames beyond N standard deviations).
+- Training data preparation: train/val splitting, state/action normalization, PyTorch Dataset wrapper generation.
+- Multi-dataset comparison (`compare` command) to diff two LeRobot datasets by episode counts, action distributions, and camera configurations.
+- Support for additional LeRobot dataset versions beyond v2.1.
